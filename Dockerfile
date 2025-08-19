@@ -22,7 +22,11 @@ RUN npm run build
 FROM node:20.18.0 AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=80
+# 允许非 root 进程绑定 80 端口: 给 node 二进制授予 cap_net_bind_service
+RUN apt-get update && apt-get install -y --no-install-recommends libcap2-bin \
+  && setcap 'cap_net_bind_service=+ep' /usr/local/bin/node \
+  && apt-get purge -y libcap2-bin && rm -rf /var/lib/apt/lists/*
 # 若在上面启用了禁用氧化层，这里也同步:
 # ENV TAILWIND_DISABLE_OXIDE=1
 COPY package*.json ./
@@ -30,6 +34,6 @@ COPY --from=deps /app/node_modules ./node_modules
 RUN npm prune --omit=dev
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/public ./public
-EXPOSE 3000
+EXPOSE 80
 USER node
-CMD ["npm","run","start","--","-p","3000"]
+CMD ["npm","run","start","--","-p","80"]
